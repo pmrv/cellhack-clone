@@ -14,7 +14,7 @@ CellHack_init (int width, int height, int num,
     GameState *gs = NULL;
     check (num > 0, "Must load at least one cell faction.");
 
-    int side_length = (unsigned int) sqrt (num);
+    int side_length = (int) sqrt (num);
     check (side_length < width && side_length < height,
            "Too many players to fit on the field.");
 
@@ -53,11 +53,14 @@ CellHack_init (int width, int height, int num,
 
     int w_step = width  / (side_length + 1);
     int h_step = height / (side_length + 1);
-    for (i = 0, n = 1; i < w_step; i++) {
-        if (n >= num) break;
+    int idx;
+    for (i = 0, n = 0; i < w_step; i++) {
         for (j = 0; j < h_step; j++, n++) {
-            gs->cells [(i + 1) * w_step % width
-                     + (j + 1) * h_step % height * width].type = n;
+            if (n >= num) break;
+            idx = (i + 1) * w_step % width
+                + (j + 1) * h_step % height * width;
+            gs->cells [idx].type = n + 1;
+            gs->cells [idx].energy = 100;
         }
     }
 

@@ -1,3 +1,7 @@
+// Copyright 2015 Marvin Poul
+// Licensed under the Do What The Fuck You Want To License, Version 2
+// See LICENSE for details or http://www.wtfpl.net/txt/copying
+
 #ifndef CELLHACK_H
 #define CELLHACK_H
 
@@ -29,10 +33,12 @@ typedef struct {
     Cell* cells;
     CellHack_decide_action* ai;
     char** names;
-    int rounds;
+    int turns;
 } GameState;
 
-#define Cellhack_rounds(gs) (gs->rounds)
+#define Cellhack_width(gs) (gs->width)
+#define Cellhack_height(gs) (gs->height)
+#define Cellhack_turns(gs) (gs->turns)
 
 /* Initializes the game state
  * Makes copy of *ai and **names, so those can be freed while the game still

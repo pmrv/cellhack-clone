@@ -1,3 +1,7 @@
+// Copyright 2015 Marvin Poul
+// Licensed under the Do What The Fuck You Want To License, Version 2
+// See LICENSE for details or http://www.wtfpl.net/txt/copying
+
 #include "cellhack.h"
 
 /* returns an integer from 0 to max exclusive */
@@ -87,7 +91,7 @@ CellHack_tick (GameState *gs)
     unsigned int queue [max_cells];
 
     check (gs != NULL, "Got NULL as game state.");
-    gs->rounds += 1;
+    gs->turns += 1;
 
     uint8_t action, action_base, action_dir, live_neighbours;
     Cell* cell = NULL;
@@ -109,7 +113,7 @@ CellHack_tick (GameState *gs)
         action_base = action / 0x10;
         action_dir  = action % 0x10;
         switch (action_base) {
-            case 0: // basic actions
+            case 0: // basic actions (rest, die, nothing)
 
                 switch (action_dir) {
                     case 1: // rest
@@ -122,8 +126,6 @@ CellHack_tick (GameState *gs)
                     case 2: // nothing
                         break;
                     case 3: // die
-                        // TODO: what if the next cell tried to feed on this or
-                        // move to its place?
                         cell->type = 0;
                         break;
                     default:
@@ -157,7 +159,7 @@ CellHack_tick (GameState *gs)
 
             default:
             invalid:
-                log_info ("AI %i: invalid command", cell->type);
+                log_info ("player %s: invalid command", gs->names [cell->type - 1]);
         }
     }
 

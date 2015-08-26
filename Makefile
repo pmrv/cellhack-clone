@@ -16,7 +16,7 @@ TESTS=$(patsubst %.c,%,$(TEST_SRC))
 TARGET=build/libcellhack.a
 SO_TARGET=$(patsubst %.a,%.so,$(TARGET))
 
-dev: CFLAGS+=-g -Wall -Wextra
+dev: CFLAGS+=-g -Wall -Wextra -O0
 dev: all
 
 all: $(TARGET) $(SO_TARGET) $(EXE_TARGET) $(AI_SOURCES) ai

@@ -181,7 +181,7 @@ CellHack_tick (GameState *gs)
         }
 
         action = cell->deferred_action;
-        switch (action) {
+        switch (action / 0x10) {
             case 0: // nothing left to do
                 break;
 

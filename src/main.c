@@ -64,11 +64,13 @@ error:
 }
 
 /* Update window to show current cells
+ * returns 1 on receiving a QuitEvent, 0 otherwise
  */
-void
+int
 gfx_display_cells (VideoState *vs, GameState *gs)
 {
     SDL_Rect rect = {0};
+    SDL_Event event = {0};
     rect.w = vs->cell_width;
     rect.h = vs->cell_height;
     Cell *cell = NULL;
@@ -98,7 +100,19 @@ gfx_display_cells (VideoState *vs, GameState *gs)
     }
 
     SDL_RenderPresent (vs->renderer);
+
+    while (SDL_PollEvent (&event)) {
+        switch (event.type) {
+            case SDL_QUIT:
+                return 1;
+                break;
+            default:
+                break;
+        }
+    }
+
     SDL_Delay (100);
+    return 0;
 }
 
 /* Destroy graphics stuff
@@ -165,6 +179,7 @@ main (int argc, char** argv)
     check (gs != NULL, "Failed to init CellHack.");
 
 #ifndef HEADLESS
+    int ret = 0;
     VideoState *vs = NULL;
     vs = gfx_display_init (i, width, height);
     check (vs != NULL, "Failed to init video state.");
@@ -172,7 +187,8 @@ main (int argc, char** argv)
 
     do {
 #ifndef HEADLESS
-        gfx_display_cells (vs, gs);
+        ret = gfx_display_cells (vs, gs);
+        if (ret == 1) break;
 #else
         txt_display_cells (gs);
 #endif

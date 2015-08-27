@@ -20,6 +20,7 @@ typedef struct {
     int height;
     int cell_width;
     int cell_height;
+    uint8_t *colors;
 } VideoState;
 
 /* Initialize graphics stuff
@@ -31,16 +32,24 @@ VideoState *
 gfx_display_init (int num, int width, int height)
 {
     VideoState *vs = NULL;
-    int err = 0;
+    int err = 0, i, n;
 
     vs = calloc (1, sizeof (VideoState));
     check (vs != NULL, "Failed to alloc video state.");
+    vs->colors = calloc (3 * num, sizeof (uint8_t));
+    check (vs->colors != NULL, "Failed alloc colors array.");
 
     // TODO: make window size configurable
     vs->width       = 800;
     vs->height      = 600;
     vs->cell_width  = vs->width / width;
     vs->cell_height = vs->height / height;
+
+    for (i = 0; i < num; i++) {
+        for (n = 0; n < 3; n++) {
+            vs->colors [i + num * n] = rand () % 256;
+        }
+    }
 
     err = SDL_CreateWindowAndRenderer (vs->width, vs->height, 0,
                                        &(vs->window), &(vs->renderer));
@@ -49,6 +58,7 @@ gfx_display_init (int num, int width, int height)
     return vs;
 
 error:
+    if (vs && vs->colors) free (vs->colors);
     if (vs) free (vs);
     return NULL;
 }
@@ -63,6 +73,7 @@ gfx_display_cells (VideoState *vs, GameState *gs)
     rect.h = vs->cell_height;
     Cell *cell = NULL;
     int width, height, x, y;
+    uint8_t *colors;
 
     SDL_SetRenderDrawColor (vs->renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
     SDL_RenderClear (vs->renderer);
@@ -79,6 +90,9 @@ gfx_display_cells (VideoState *vs, GameState *gs)
             rect.x = x * vs->cell_width;
             rect.y = y * vs->cell_height;
 
+            colors = vs->colors + (cell->type - 1);
+            SDL_SetRenderDrawColor (vs->renderer, colors [0], colors [1], colors [2],
+                                    cell->energy + 55);
             SDL_RenderFillRect (vs->renderer, &rect);
         }
     }

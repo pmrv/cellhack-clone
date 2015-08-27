@@ -44,8 +44,8 @@ CellHack_init (int width, int height, int num,
     int i, j, di, dj, ei, ej, n;
     for (i = 0; i < width; i++) {
         for (j = 0; j < height; j++) {
-            for (di = -1, n = 0; di <= 1; di++) {
-                for (dj = -1; dj <= 1; dj++, n++) {
+            for (dj = -1, n = 0; dj <= 1; dj++) {
+                for (di = -1; di <= 1; di++, n++) {
                     ei = (i + di) % width;
                     ej = (j + dj) % height;
                     if (ei < 0) ei = width - 1;

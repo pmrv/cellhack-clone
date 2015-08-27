@@ -1,6 +1,5 @@
-CFLAGS=-O2 -Isrc -rdynamic $(OPTFLAGS)
-LDLIBS=-ldl -lm $(OPTLIBS)
-PREFIX?=/usr/local
+CFLAGS=-O2 -Isrc -rdynamic `pkg-config --cflags sdl2` $(OPTFLAGS)
+LDLIBS=-ldl -lm `pkg-config --libs sdl2` $(OPTLIBS)
 
 LIB_SOURCES=$(wildcard src/**/*.c)
 LIB_OBJECTS=$(patsubst %.c,%.o,$(LIB_SOURCES))

@@ -36,8 +36,8 @@ Your cell has the following actions at its disposal
 * move; if the target is blocked by another cell, nothing happens
 * split; Create a new cell in the target with half your energy and a copy
   of your memory. Nothing happens if the target is occupied.
-Macros for the values these actions are defined in (src/cellhack/player.h)[a separate
-header] that I took directly from (https://cellhack.net).
+Macros for the values these actions are defined in [a separate
+header](src/cellhack/player.h) that I took directly from https://cellhack.net.
 All actions that reference a target must be combined with a direction, either
 "up", "down", "left" or "right", again macros exist for those.
 Once you're done, simply return the value.

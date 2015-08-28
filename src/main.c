@@ -175,7 +175,7 @@ main (int argc, char** argv)
                names [i], dlerror ());
     }
 
-    gs = CellHack_init (width, height, i, ais, names);
+    gs = CellHack_init (width, height, i, 1, ais, names);
     check (gs != NULL, "Failed to init CellHack.");
 
 #ifndef HEADLESS

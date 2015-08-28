@@ -24,7 +24,7 @@ Mechanics
 
 Your cell has the following actions at its disposal
 * nothing; it simply waits, fall-back if e.g. your function fails to
-  return after a given time (_not yet implemented_) or returns an invalid move
+  return after a given time or returns an invalid move
 * die; well, duh
 * rest; restores some of it energy. The current formula is `r =
   max (7 - 2 * n, 1)`, where `r` is the return energy and `n` is the number of

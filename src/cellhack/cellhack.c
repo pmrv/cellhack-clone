@@ -4,6 +4,46 @@
 
 #include "cellhack.h"
 
+void *
+Executor (ExecutorArgs *args)
+{
+    Cell *cell;
+    int err = 0;
+    uint8_t result = 0;
+    check (args != NULL, "Got NULL as args.");
+    err = pthread_setcanceltype (PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
+    check (err == 0, "Failed to set cancel type to asynchronous.");
+
+    while (1) {
+
+        pthread_barrier_wait (&args->barrier);
+
+        pthread_mutex_lock (&args->lock);
+
+        cell = args->arg_cell;
+
+        pthread_mutex_unlock (&args->lock);
+
+        // mutex must be unlocked here otherwise the main thread cannot cancel
+        // if the user function unexpectedly blocks (because it cannot wake up
+        // from the condition wait).
+        result = args->work (cell->env, cell->energy, &cell->memory);
+
+        pthread_mutex_lock (&args->lock);
+
+        args->result = result;
+        args->done = 1;
+        pthread_cond_signal (&args->cond);
+
+        pthread_mutex_unlock (&args->lock);
+
+    }
+
+error:
+    return NULL;
+}
+
+
 /* returns an integer from 0 to max exclusive */
 unsigned int
 randint (unsigned int max)
@@ -11,11 +51,13 @@ randint (unsigned int max)
     return rand () % max; // can't be arsed about modulo bias just yet
 }
 
+
 GameState*
-CellHack_init (int width, int height, int num,
+CellHack_init (int width, int height, int num, unsigned int timeout,
                CellHack_decide_action* ai, char** names)
 {
     GameState *gs = NULL;
+    int err = 0;
     check (num > 0, "Must load at least one cell faction.");
 
     // all starting cells are arranged in a square
@@ -37,6 +79,24 @@ CellHack_init (int width, int height, int num,
 
     gs->cells = calloc (width * height, sizeof (Cell));
     check (gs->cells != NULL, "Failed to alloc playing field.");
+
+    gs->ea = calloc (1, sizeof (ExecutorArgs));
+    check (gs->ea != NULL, "Failed to alloc executor arguments.");
+
+    err = pthread_mutex_init (&gs->ea->lock, NULL);
+    check (err == 0, "Failed to init mutex.");
+
+    pthread_condattr_t cond_attr;
+    pthread_condattr_init (&cond_attr);
+    pthread_condattr_setclock (&cond_attr, CLOCK_REALTIME);
+    err = pthread_cond_init (&gs->ea->cond, &cond_attr);
+    check (err == 0, "Failed to init condition.");
+
+    err = pthread_barrier_init (&gs->ea->barrier, NULL, 2);
+    check (err == 0, "Failt to init barrier.");
+
+    err = pthread_create (&gs->etid, NULL, (void *(*)(void *)) Executor, gs->ea);
+    check (err == 0, "Failed to create executor thread.");
 
     gs->width  = width;
     gs->height = height;
@@ -90,6 +150,8 @@ CellHack_destroy (GameState *gs)
 void
 CellHack_tick (GameState *gs)
 {
+    int err;
+    struct timespec ts;
     unsigned int temp, max_cells = gs->width * gs->height;
     unsigned int queue [max_cells];
 
@@ -111,7 +173,43 @@ CellHack_tick (GameState *gs)
                 live_neighbours++;
             }
         }
-        action = gs->ai [cell->type - 1] (cell->env, cell->energy, &(cell->memory));
+
+        pthread_mutex_lock (&gs->ea->lock);
+
+        gs->ea->arg_cell = cell;
+        gs->ea->work = gs->ai [cell->type - 1];
+
+        err = clock_gettime (CLOCK_REALTIME, &ts);
+        check (err == 0, "Failed to get clock time, bailing.");
+
+        // TODO: make timeout configurable
+        ts.tv_sec += 1;
+
+        pthread_barrier_wait (&gs->ea->barrier);
+
+        do {
+            err = pthread_cond_timedwait (&gs->ea->cond, &gs->ea->lock, &ts);
+        } while (gs->ea->done == 0 && err == 0);
+
+        if (err == ETIMEDOUT) {
+            log_info ("Player %s timed out.", gs->names [cell->type - 1]);
+
+            pthread_cancel (gs->etid);
+            pthread_mutex_unlock (&gs->ea->lock);
+
+            err = pthread_create (&(gs->etid), NULL, (void *(*)(void *)) Executor, gs->ea);
+            check (err == 0, "Failed to recreate executor thread.");
+
+            action = 2;
+        } else
+        if (err == 0) {
+            action = gs->ea->result;
+            gs->ea->done = 0;
+
+            pthread_mutex_unlock (&gs->ea->lock);
+        } else {
+            sentinel ("Error while waiting on condition.");
+        }
 
         action_base = action / 0x10;
         action_dir  = action % 0x10;
@@ -121,7 +219,7 @@ CellHack_tick (GameState *gs)
                 switch (action_dir) {
                     case 1: // rest
                         cell->energy += (live_neighbours >= 3) ? 7 - 2 * live_neighbours
-                                                              : 1;
+                                                               : 1;
                         if (cell->energy > 200) {
                             cell->energy = 200;
                         }

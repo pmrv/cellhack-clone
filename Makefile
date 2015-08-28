@@ -9,8 +9,8 @@ EXE_OBJECTS=$(patsubst %.c,%.o,$(EXE_SOURCES))
 
 EXE_TARGET=build/cellhack
 
-TEST_SRC=$(wildcard tests/*_tests.c)
-TESTS=$(patsubst %.c,%,$(TEST_SRC))
+EXAMPLES=$(wildcard examples/*.c)
+SO_EXAMPLES=$(patsubst %.c,%.so,$(EXAMPLES))
 
 TARGET=build/libcellhack.a
 SO_TARGET=$(patsubst %.a,%.so,$(TARGET))
@@ -18,7 +18,12 @@ SO_TARGET=$(patsubst %.a,%.so,$(TARGET))
 dev: CFLAGS+=-g -Wall -Wextra -O0
 dev: all
 
-all: $(TARGET) $(SO_TARGET) $(EXE_TARGET) $(AI_SOURCES) ai
+all: $(TARGET) $(SO_TARGET) $(EXE_TARGET) $(AI_SOURCES) examples
+
+examples: $(SO_EXAMPLES)
+
+%.so: %.c
+	gcc $(CFLAGS) --shared -o $@ $*.c
 
 $(EXE_TARGET): build $(EXE_OBJECTS) $(TARGET)
 	$(CC) $(CFLAGS) -o $(EXE_TARGET) $(EXE_OBJECTS) $(TARGET) $(LDLIBS)
@@ -34,8 +39,6 @@ $(SO_TARGET): $(TARGET) $(LIB_OBJECTS)
 build:
 	@mkdir -p build
 
+.PHONY:
 clean:
-	rm -rf build $(LIB_OBJECTS) $(EXE_OBJECTS) $(TESTS)
-	rm -f tests/tests.log
-	find . -name "*.gc*" -exec rm {} \;
-	rm -rf `find -name "*.dSYM -print"`
+	rm -rf build $(LIB_OBJECTS) $(EXE_OBJECTS) $(SO_EXAMPLES)

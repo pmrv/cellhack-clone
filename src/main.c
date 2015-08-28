@@ -111,7 +111,7 @@ gfx_display_cells (VideoState *vs, GameState *gs)
         }
     }
 
-    SDL_Delay (100);
+    SDL_Delay (17);
     return 0;
 }
 

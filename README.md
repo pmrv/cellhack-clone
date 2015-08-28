@@ -36,8 +36,8 @@ Your cell has the following actions at its disposal
 * move; if the target is blocked by another cell, nothing happens
 * split; Create a new cell in the target with half your energy and a copy
   of your memory. Nothing happens if the target is occupied.
-Macros for the values these actions are defined in (src/cellhack/player.h)[a separate
-header] that I took directly from (https://cellhack.net).
+Macros for the values these actions are defined in [a separate
+header](src/cellhack/player.h) that I took directly from https://cellhack.net.
 All actions that reference a target must be combined with a direction, either
 "up", "down", "left" or "right", again macros exist for those.
 Once you're done, simply return the value.
@@ -58,10 +58,9 @@ All of this subject to change for the sake of balancing.
 Implementation
 -
 
-`cellhack-clone` reads the implementations of the cell functions from a
-separate shared object for each player.
-
-Build with (you guessed it) `make`, it should™ just work.
+Build with (you guessed it) `make`, it should™ just work. The default build
+comes with a simple SDL interface, if you don't want that or don't have SDL2
+installed, build with `make OPTFLAGS=-DHEADLESS`.
 Run with `./build/cellhack number_of_turns width height player_name
 path_to_shared_object … …`, `width` and `height` give the size of the arena
 (with warped edges), `turns` how long the game should be played `player_name`
@@ -73,4 +72,4 @@ arena, if the number of players is not a square number, some places on one edge
 of the square will be left empty.
 
 Build the shared objects with `$(CC) --shared -Isrc -o some_path.so
-some_other_path.c`.
+some_other_path.c` from the repository root.

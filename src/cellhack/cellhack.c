@@ -18,7 +18,9 @@ CellHack_init (int width, int height, int num,
     GameState *gs = NULL;
     check (num > 0, "Must load at least one cell faction.");
 
-    int side_length = (int) sqrt (num);
+    // all starting cells are arranged in a square
+    // number of starting cells per side of the square is
+    int side_length = (int) ceilf (sqrtf ((float) num));
     check (side_length < width && side_length < height,
            "Too many players to fit on the field.");
 
@@ -42,8 +44,8 @@ CellHack_init (int width, int height, int num,
     int i, j, di, dj, ei, ej, n;
     for (i = 0; i < width; i++) {
         for (j = 0; j < height; j++) {
-            for (di = -1, n = 0; di <= 1; di++) {
-                for (dj = -1; dj <= 1; dj++, n++) {
+            for (dj = -1, n = 0; dj <= 1; dj++) {
+                for (di = -1; di <= 1; di++, n++) {
                     ei = (i + di) % width;
                     ej = (j + dj) % height;
                     if (ei < 0) ei = width - 1;
@@ -55,14 +57,15 @@ CellHack_init (int width, int height, int num,
         }
     }
 
-    int w_step = width  / (side_length + 1);
-    int h_step = height / (side_length + 1);
+    int w_step = (int) floorf ((float) width  / side_length);
+    int h_step = (int) floorf ((float) height / side_length);
     int idx;
-    for (i = 0, n = 0; i < w_step; i++) {
-        for (j = 0; j < h_step; j++, n++) {
+    for (i = 0, n = 0; i < side_length; i++) {
+        if (n >= num) break;
+        for (j = 0; j < side_length; j++, n++) {
             if (n >= num) break;
-            idx = (i + 1) * w_step % width
-                + (j + 1) * h_step % height * width;
+            idx =  i * w_step + w_step / 2
+                + (j * h_step + h_step / 2) * width;
             gs->cells [idx].type = n + 1;
             gs->cells [idx].energy = 100;
         }
@@ -178,7 +181,7 @@ CellHack_tick (GameState *gs)
         }
 
         action = cell->deferred_action;
-        switch (action) {
+        switch (action / 0x10) {
             case 0: // nothing left to do
                 break;
 

@@ -6,6 +6,7 @@
 #define CELLHACK_H
 
 #include <math.h>
+#include <pthread.h>
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -28,12 +29,25 @@ typedef struct Cell {
 } Cell;
 
 typedef struct {
+    pthread_cond_t cond;
+    pthread_mutex_t lock;
+    pthread_barrier_t barrier;
+    unsigned int timeout;
+    CellHack_decide_action work;
+    Cell *arg_cell;
+    uint8_t done;
+    uint8_t result;
+} ExecutorArgs;
+
+typedef struct {
     int width;
     int height;
     Cell* cells;
     CellHack_decide_action* ai;
     char** names;
     int turns;
+    ExecutorArgs *ea;
+    pthread_t etid;
 } GameState;
 
 #define Cellhack_width(gs) (gs->width)
@@ -43,7 +57,7 @@ typedef struct {
 /* Initializes the game state
  * Makes copy of *ai and **names, so those can be freed while the game still
  * uses them */
-GameState* CellHack_init (int width, int height, int num, CellHack_decide_action* ai, char** names);
+GameState* CellHack_init (int width, int height, int num, unsigned int timeout, CellHack_decide_action* ai, char** names);
 
 /* Cleans the game's ressources up */
 void CellHack_destroy (GameState* gs);

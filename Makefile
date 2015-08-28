@@ -22,8 +22,9 @@ all: $(TARGET) $(SO_TARGET) $(EXE_TARGET) $(AI_SOURCES) examples
 
 examples: $(SO_EXAMPLES)
 
+%.so: CFLAGS+=-fPIC --shared
 %.so: %.c
-	gcc $(CFLAGS) --shared -o $@ $*.c
+	gcc $(CFLAGS) -o $@ $*.c
 
 $(EXE_TARGET): build $(EXE_OBJECTS) $(TARGET)
 	$(CC) $(CFLAGS) -o $(EXE_TARGET) $(EXE_OBJECTS) $(TARGET) $(LDLIBS)

@@ -10,7 +10,7 @@
 
 #include "cellhack/cellhack.h"
 
-#define usage() fprintf (stderr, "USAGE: cellhack turns width height player_name path_to_ai_so … …")
+#define usage() fprintf (stderr, "USAGE: cellhack turns width height replay_file player_name path_to_ai_so … …")
 
 #ifndef HEADLESS
 typedef struct {
@@ -127,36 +127,86 @@ gfx_display_destroy (VideoState *vs)
 
     free (vs);
 }
-#else
-void
-txt_display_cells (GameState* gs)
-{
-    check (gs != NULL, "Got NULL as game state.");
+#endif
 
+/* Init saving stuff
+ * target_file      where to write the header
+ * width, height    size of the playing field
+ * max_players      number of players on the field
+ * player_names     their names in the order that corresponds to the values of
+ *                  Cell.type value (player_names [0] -> Cell.type = 1, …)
+ *
+ * format:
+ *  > width: integer
+ *  > height: integer
+ *  > players: first_player, second_player, …
+ *  > \000
+ * this is followed by frames of 2 * width * height bytes for each turn
+ * frames are as described in save_cells and no delimiter is between them
+ */
+FILE *
+save_init (FILE *target_file, int width, int height, int max_players, char **player_names)
+{
     int i;
-    for (i = 0; i < Cellhack_width(gs) * Cellhack_height(gs); i++) {
-        printf ("%i", gs->cells [i].type);
-        if (i > 0 && (i + 1) % Cellhack_width(gs) == 0) printf ("\n");
+
+    fprintf (target_file, "width: %i\n", width);
+    fprintf (target_file, "height: %i\n", height);
+    fprintf (target_file, "players: ");
+    for (i = 0; i < max_players - 1; i++) {
+        fprintf (target_file, "%s, ", player_names [i]);
     }
-    printf ("\n");
+    fprintf (target_file, "%s\n", player_names [max_players - 1]);
+    fwrite ("\0", 1, sizeof (char), target_file);
+
+    return target_file;
+}
+
+/* Clean up saving stuff
+ */
+void
+save_destroy (FILE *target_file)
+{
+    // we could write some footer here, but eh, don't see the need yet
+    fclose (target_file);
+}
+
+/* Save type and energy of all cells directly into a file
+ * target_file  where to write the data (assumes that header data was already
+ *              written to that location
+ * max_cells    number of cells in the next array
+ * cells        pointer to an array of cells to save
+ */
+int
+save_cells (FILE *target_file, int max_cells, Cell *cells)
+{
+    int i, ret;
+    Cell cell;
+    uint16_t buf[max_cells];
+    for (i = 0; i < max_cells; i++) {
+        cell = cells [i];
+        buf [i] = cell.type << 8 | cell.energy;
+    }
+    ret = fwrite (buf, sizeof (uint16_t), max_cells, target_file);
+    check (ret == max_cells, "Failed to write cell state to file.");
+
+    return 0;
 
 error:
-    return;
+    return 1;
 }
-#endif
 
 int
 main (int argc, char** argv)
 {
-
-    int i = 0, j, n = (argc - 3) / 2;
+    int i = 0, j, n = (argc - 4) / 2;
     int turns, width, height;
     char* names [n];
     void* dlls [n];
     CellHack_decide_action ais [n];
     GameState *gs = NULL;
+    FILE *target_file = NULL;
 
-    if (argc < 4 || argc % 2 == 1) {
+    if (argc < 7 || argc % 2 == 0) {
         usage ();
         return 1;
     }
@@ -166,8 +216,8 @@ main (int argc, char** argv)
     height = atoi (argv [3]);
 
     for (i = 0; i < n; i += 1) {
-        names [i] = argv [2 * i + 4];
-        dlls [i]  = dlopen (argv [2 * i + 5], RTLD_LAZY);
+        names [i] = argv [2 * i + 5];
+        dlls [i]  = dlopen (argv [2 * i + 6], RTLD_LAZY);
         check (dlls [i] != NULL, "Failed to load dll for player '%s': %s",
                names [i], dlerror ());
         ais [i]   = dlsym (dlls [i], "cell_decide_action");
@@ -177,6 +227,10 @@ main (int argc, char** argv)
 
     gs = CellHack_init (width, height, i, 1, ais, names);
     check (gs != NULL, "Failed to init CellHack.");
+
+    target_file = fopen (argv [4], "w");
+    check (target_file != NULL, "Failed to open replay file");
+    save_init (target_file, width, height, i, names);
 
 #ifndef HEADLESS
     int ret = 0;
@@ -189,18 +243,19 @@ main (int argc, char** argv)
 #ifndef HEADLESS
         ret = gfx_display_cells (vs, gs);
         if (ret == 1) break;
-#else
-        txt_display_cells (gs);
 #endif
+        save_cells (target_file, Cellhack_width (gs) * Cellhack_height(gs), gs->cells);
         CellHack_tick (gs);
     } while (Cellhack_turns(gs) < turns);
-
 
 #ifndef HEADLESS
     gfx_display_destroy (vs);
 #endif
 
     CellHack_destroy (gs);
+    // just for completeness sake, in the future we might decide to write a
+    // footer or not use stdin
+    save_destroy (target_file);
 
     return 0;
 
@@ -209,5 +264,6 @@ error:
         dlclose (dlls [j]);
     }
     if (gs) CellHack_destroy (gs);
+    if (target_file) fclose (target_file);
     return 1;
 }

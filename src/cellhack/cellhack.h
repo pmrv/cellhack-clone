@@ -47,6 +47,7 @@ typedef struct {
     char** names;
     int turns;
     ExecutorArgs *ea;
+    unsigned int timeout;
     pthread_t etid;
 } GameState;
 

@@ -100,6 +100,7 @@ CellHack_init (int width, int height, int num, unsigned int timeout,
 
     gs->width  = width;
     gs->height = height;
+    gs->timeout = timeout;
 
     int i, j, di, dj, ei, ej, n;
     for (i = 0; i < width; i++) {
@@ -182,8 +183,7 @@ CellHack_tick (GameState *gs)
         err = clock_gettime (CLOCK_REALTIME, &ts);
         check (err == 0, "Failed to get clock time, bailing.");
 
-        // TODO: make timeout configurable
-        ts.tv_sec += 1;
+        ts.tv_sec += gs->timeout;
 
         pthread_barrier_wait (&gs->ea->barrier);
 

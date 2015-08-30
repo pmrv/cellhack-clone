@@ -237,16 +237,20 @@ main (int argc, char** argv)
     VideoState *vs = NULL;
     vs = gfx_display_init (i, width, height);
     check (vs != NULL, "Failed to init video state.");
+
+    gfx_display_cells (vs, gs);
 #endif
 
-    do {
+    save_cells (target_file, Cellhack_width (gs) * Cellhack_height(gs), gs->cells);
+
+    while (Cellhack_turns(gs) < turns) {
+        CellHack_tick (gs);
 #ifndef HEADLESS
         ret = gfx_display_cells (vs, gs);
         if (ret == 1) break;
 #endif
         save_cells (target_file, Cellhack_width (gs) * Cellhack_height(gs), gs->cells);
-        CellHack_tick (gs);
-    } while (Cellhack_turns(gs) < turns);
+    }
 
 #ifndef HEADLESS
     gfx_display_destroy (vs);

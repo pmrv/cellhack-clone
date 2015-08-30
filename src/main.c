@@ -199,8 +199,9 @@ int
 main (int argc, char** argv)
 {
     int i = 0, j, n = (argc - 4) / 2;
+    int surviving_cells [n];
     int turns, width, height;
-    char* names [n];
+    char* player_names [n];
     void* dlls [n];
     CellHack_decide_action ais [n];
     GameState *gs = NULL;
@@ -216,21 +217,21 @@ main (int argc, char** argv)
     height = atoi (argv [3]);
 
     for (i = 0; i < n; i += 1) {
-        names [i] = argv [2 * i + 5];
+        player_names [i] = argv [2 * i + 5];
         dlls [i]  = dlopen (argv [2 * i + 6], RTLD_LAZY);
         check (dlls [i] != NULL, "Failed to load dll for player '%s': %s",
-               names [i], dlerror ());
+               player_names [i], dlerror ());
         ais [i]   = dlsym (dlls [i], "cell_decide_action");
         check (ais [i] != NULL, "Failed to load ai function for player '%s': %s",
-               names [i], dlerror ());
+               player_names [i], dlerror ());
     }
 
-    gs = CellHack_init (width, height, i, 1, ais, names);
+    gs = CellHack_init (width, height, i, 1, ais, player_names);
     check (gs != NULL, "Failed to init CellHack.");
 
     target_file = fopen (argv [4], "w");
     check (target_file != NULL, "Failed to open replay file");
-    save_init (target_file, width, height, i, names);
+    save_init (target_file, width, height, i, player_names);
 
 #ifndef HEADLESS
     int ret = 0;
@@ -255,6 +256,22 @@ main (int argc, char** argv)
 #ifndef HEADLESS
     gfx_display_destroy (vs);
 #endif
+
+    for (j = 0; j < n; j++) {
+        surviving_cells [j] = 0;
+    }
+    uint8_t type = 0;
+    for (j = 0; j < Cellhack_width (gs) * Cellhack_height (gs); j++) {
+        type = gs->cells [j].type;
+        if (type != 0) {
+            surviving_cells [type - 1]++;
+        }
+    }
+    printf ("Player: Cells surving\n");
+    printf ("---------------------\n");
+    for (j = 0; j < n; j++) {
+        printf ("%s: %i\n", player_names [j], surviving_cells [j]);
+    }
 
     CellHack_destroy (gs);
     // just for completeness sake, in the future we might decide to write a

@@ -3,7 +3,7 @@ Cell Hack Clone
 
 Cell Hack is a game where you control the behaviour of a number of cells with
 the aim to either outnumber or wipe out all other players in an arena. Cells
-have a certain amount of health (called `energy`), they can eat (take energy)
+have a certain amount of health (called `energy`, starts at 100 and is capped at 256), they can eat (take energy)
 from or feed (give energy) to other cells, move or split themselves. All
 actions happen in turns. If their energy falls below a certain threshold in a
 round they die. To pull the strings you provide a function in plain C that is
@@ -46,6 +46,7 @@ Execution order of the cell is (or should appear to be) as follows
 * rest
 * eat, feed
 * all others
+
 The order in which "move" and "split" actions (which may block each other) are
 acted upon is random. This means that currently e.g. an enemy cell can keep you
 from splitting, kill you before you move away or you cannot deny your own cells

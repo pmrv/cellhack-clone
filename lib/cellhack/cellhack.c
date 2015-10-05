@@ -152,7 +152,9 @@ void
 CellHack_tick (GameState *gs)
 {
     int err;
+#ifndef DEBUG
     struct timespec ts;
+#endif
     unsigned int temp, max_cells = gs->width * gs->height;
     unsigned int queue [max_cells];
 
@@ -180,15 +182,21 @@ CellHack_tick (GameState *gs)
         gs->ea->arg_cell = cell;
         gs->ea->work = gs->ai [cell->type - 1];
 
+#ifndef DEBUG
         err = clock_gettime (CLOCK_REALTIME, &ts);
         check (err == 0, "Failed to get clock time, bailing.");
 
         ts.tv_sec += gs->timeout;
+#endif
 
         pthread_barrier_wait (&gs->ea->barrier);
 
         do {
+#ifndef DEBUG
             err = pthread_cond_timedwait (&gs->ea->cond, &gs->ea->lock, &ts);
+#else
+            err = pthread_cond_wait (&gs->ea->cond, &gs->ea->lock);
+#endif
         } while (gs->ea->done == 0 && err == 0);
 
         if (err == ETIMEDOUT) {

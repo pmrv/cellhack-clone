@@ -268,7 +268,6 @@ main (int argc, char** argv)
         }
     }
     printf ("Player: Cells surving\n");
-    printf ("---------------------\n");
     for (j = 0; j < n; j++) {
         printf ("%s: %i\n", player_names [j], surviving_cells [j]);
     }

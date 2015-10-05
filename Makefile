@@ -1,13 +1,14 @@
-CFLAGS=-O2 -Isrc -rdynamic `pkg-config --cflags sdl2` $(OPTFLAGS)
+CFLAGS=-O2 -Ilib -rdynamic `pkg-config --cflags sdl2` $(OPTFLAGS)
 LDLIBS=-ldl -lm `pkg-config --libs sdl2` $(OPTLIBS)
 
-LIB_SOURCES=$(wildcard src/**/*.c)
+LIB_SOURCES=$(wildcard lib/**/*.c)
 LIB_OBJECTS=$(patsubst %.c,%.o,$(LIB_SOURCES))
 
-EXE_SOURCES=$(wildcard src/*.c)
-EXE_OBJECTS=$(patsubst %.c,%.o,$(EXE_SOURCES))
+EXE_SOURCES=$(wildcard bin/*.c)
+EXE_TARGETS=$(patsubst %.c,%,$(EXE_SOURCES))
 
-EXE_TARGET=build/cellhack
+MSC_SOURCES=$(wildcard lib/*.c)
+MSC_OBJECTS=$(patsubst %.c,%.o,$(MSC_SOURCES))
 
 EXAMPLES=$(wildcard examples/*.c)
 SO_EXAMPLES=$(patsubst %.c,%.so,$(EXAMPLES))
@@ -15,10 +16,10 @@ SO_EXAMPLES=$(patsubst %.c,%.so,$(EXAMPLES))
 TARGET=build/libcellhack.a
 SO_TARGET=$(patsubst %.a,%.so,$(TARGET))
 
-dev: CFLAGS+=-g -Wall -Wextra -O0
+dev: CFLAGS+=-g -Wall -Wextra -O0 -DDEBUG
 dev: all
 
-all: $(TARGET) $(SO_TARGET) $(EXE_TARGET) $(AI_SOURCES) examples
+all: $(TARGET) $(SO_TARGET) $(EXE_TARGETS) examples
 
 examples: $(SO_EXAMPLES)
 
@@ -26,8 +27,8 @@ examples: $(SO_EXAMPLES)
 %.so: %.c
 	gcc $(CFLAGS) -o $@ $*.c
 
-$(EXE_TARGET): build $(EXE_OBJECTS) $(TARGET)
-	$(CC) $(CFLAGS) -o $(EXE_TARGET) $(EXE_OBJECTS) $(TARGET) $(LDLIBS)
+$(EXE_TARGETS): build $(MSC_OBJECTS) $(TARGET)
+	$(CC) $(CFLAGS) -o $@ $@.c $(MSC_OBJECTS) $(TARGET) $(LDLIBS)
 
 $(TARGET): CFLAGS += -fPIC
 $(TARGET): build $(LIB_OBJECTS)
@@ -42,4 +43,4 @@ build:
 
 .PHONY:
 clean:
-	rm -rf build $(LIB_OBJECTS) $(EXE_OBJECTS) $(SO_EXAMPLES)
+	rm -rf build $(TARGET) $(SO_TARGET) $(LIB_OBJECTS) $(EXE_TARGETS) $(SO_EXAMPLES)

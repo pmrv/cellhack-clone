@@ -1,4 +1,4 @@
-CFLAGS=-O2 -Ilib -rdynamic `pkg-config --cflags sdl2` $(OPTFLAGS)
+CFLAGS=-O2 -Ilib -rdynamic -pthread `pkg-config --cflags sdl2` $(OPTFLAGS)
 LDLIBS=-ldl -lm `pkg-config --libs sdl2` $(OPTLIBS)
 
 LIB_SOURCES=$(wildcard lib/**/*.c)

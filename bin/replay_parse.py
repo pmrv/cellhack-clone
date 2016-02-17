@@ -1,16 +1,43 @@
 #!/usr/bin/env python3
+import itertools
+import struct
 import json
 import sys
 
-def replay_parse (ifile, ofile = sys.stdout):
-    dump = ifile.read ()
-    split_idx = dump.find (b'\n\0')
-    txt = dump [:split_idx].decode ("utf8")
-    raw = dump [split_idx + 2:]
-
+def parse_meta (buf):
+    # last char is a newline, we don't want that
+    txt = bytes(itertools.takewhile(lambda c: c != 0,
+                (buf.read(1)[0] for _ in itertools.count()))).decode("utf8")[:-1]
     meta_data = {}
     for k, v in map (lambda x: x.split (":"), txt.split ("\n")):
         meta_data [k] = v.strip ()
+
+    return meta_data
+
+cell_struct = struct.Struct("=BBQ")
+def parse_cell (buf, players):
+    raw = buf.read (cell_struct.size)
+    if len(raw) < cell_struct.size: raise EOFError
+    player_id, energy, memory = cell_struct.unpack (raw)
+    return {"player": players [player_id],
+            "energy": energy,
+            "memory": memory}
+
+def parse_frames (buf, width, height, players):
+    while 1:
+        frame = []
+        for _ in range (height):
+            frame.append ([])
+            for _ in range (width):
+                try:
+                    frame [-1].append (parse_cell (buf, players))
+                except EOFError:
+                    raise StopIteration
+
+        yield frame
+
+def parse (buf):
+    meta_data = parse_meta (buf)
 
     try:
         width = int (meta_data ["width"])
@@ -21,29 +48,14 @@ def replay_parse (ifile, ofile = sys.stdout):
         print ("replay file lacks some meta data, bailing.")
         sys.exit (1)
 
-    cell_states = []
-    while raw:
-        frame = raw [:width * height * 4]
-        raw = raw [4 * width * height:]
+    frames = list(parse_frames(buf, width, height, players))
+    return {"meta": meta_data, "frames": frames}
 
-        for j in range (height):
-            cell_states.append ([])
-            for i in range (width):
-                idx  = 2 * (i + j * width)
-                cell = frame [idx:idx + 2]
-                cell_states [-1].append (
-                        {"player": players [int (cell [1])],
-                        "energy": int (cell [0])})
-
-    json.dump ({"meta": meta_data, "frames": cell_states}, ofile)
-
-def main ():
+if __name__ == "__main__":
     with open (sys.argv [1], "rb") as ifile:
         if len (sys.argv) < 3:
-            replay_parse (ifile)
+            json.dump (parse (ifile), sys.stdout)
         else:
             with open (sys.argv [2], "w") as ofile:
-                replay_parse (ifile, ofile)
+                json.dump (parse (ifile), ofile)
 
-
-if __name__ == "__main__": main ()

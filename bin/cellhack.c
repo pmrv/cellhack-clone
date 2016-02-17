@@ -129,6 +129,12 @@ gfx_display_destroy (VideoState *vs)
 }
 #endif
 
+typedef struct __attribute__ ((packed)) {
+    uint8_t player;
+    uint8_t energy;
+    uint64_t memory;
+} SaveFormat;
+
 /* Init saving stuff
  * target_file      where to write the header
  * width, height    size of the playing field
@@ -142,7 +148,7 @@ gfx_display_destroy (VideoState *vs)
  *  > players: first_player, second_player, …
  *  > \000
  * this is followed by frames of 2 * width * height bytes for each turn
- * frames are as described in save_cells and no delimiter is between them
+ * frames are as described in save_cells and SaveFormat and no delimiter is between them
  */
 FILE *
 save_init (FILE *target_file, int width, int height, int max_players, char **player_names)
@@ -181,12 +187,14 @@ save_cells (FILE *target_file, int max_cells, Cell *cells)
 {
     int i, ret;
     Cell cell;
-    uint16_t buf[max_cells];
+    SaveFormat buf[max_cells];
     for (i = 0; i < max_cells; i++) {
         cell = cells [i];
-        buf [i] = cell.type << 8 | cell.energy;
+        buf[i].player = cell.type;
+        buf[i].energy = cell.energy;
+        buf[i].memory = cell.memory;
     }
-    ret = fwrite (buf, sizeof (uint16_t), max_cells, target_file);
+    ret = fwrite (buf, sizeof (SaveFormat), max_cells, target_file);
     check (ret == max_cells, "Failed to write cell state to file.");
 
     return 0;
@@ -252,6 +260,7 @@ main (int argc, char** argv)
 #endif
         save_cells (target_file, Cellhack_width (gs) * Cellhack_height(gs), gs->cells);
     }
+
 
 #ifndef HEADLESS
     gfx_display_destroy (vs);
